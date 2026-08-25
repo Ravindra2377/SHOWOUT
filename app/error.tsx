@@ -1,0 +1,2 @@
+"use client";
+export default function ErrorPage({reset}:{reset:()=>void}){return <div className="page-narrow"><div className="empty-state" style={{marginTop:50}}><span className="stamp">ERROR</span><h1 className="display-sm">MISSED<br/>THE CUE.</h1><p>Something went wrong. Your draft and locked votes have not been changed.</p><button className="button primary" onClick={reset}>Try again</button></div></div>}

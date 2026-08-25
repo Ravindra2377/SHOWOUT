@@ -1,0 +1,4 @@
+import "server-only";
+import { store } from "./store";
+const allowed=new Set(["onboarding_completed","challenge_viewed","challenge_entered","upload_started","upload_completed","entry_submitted","reveal_viewed","vote_locked","identity_revealed","invitation_created","invitation_opened","team_invitation_accepted","results_viewed","second_challenge_entered","message_request_sent","message_request_accepted","message_request_declined","conversation_started","team_invitation_sent","block_performed","report_submitted"]);
+export function track(name:string,userId?:string,metadata:Record<string,unknown>={}){if(!allowed.has(name))throw new Error("Unknown analytics event");const forbidden=["body","message","text","content"];if(Object.keys(metadata).some(key=>forbidden.includes(key.toLowerCase())))throw new Error("Private content cannot enter analytics");store.analytics.push({name,userId,metadata,at:new Date().toISOString()});}

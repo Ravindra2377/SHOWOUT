@@ -1,0 +1,1 @@
+export default function Loading(){return <div className="page"><p className="eyebrow">Loading</p><div className="progress-track" style={{marginTop:20}}><div className="progress-fill" style={{width:"45%"}}/></div><h1 className="display-md" style={{marginTop:30}}>SETTING<br/>THE STAGE.</h1></div>}

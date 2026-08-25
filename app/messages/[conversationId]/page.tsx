@@ -1,0 +1,2 @@
+import { Conversation } from "@/components/conversation";
+export default async function ConversationPage({params}:{params:Promise<{conversationId:string}>}){const {conversationId}=await params;return <Conversation id={conversationId}/>}

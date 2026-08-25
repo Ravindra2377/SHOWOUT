@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "SHOWOUT",
+    "slug": "showout-pilot",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "showout",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.showout.pilot",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SHOWOUT uses the camera when you choose to record a challenge entry.",
+        "NSMicrophoneUsageDescription": "SHOWOUT uses the microphone when you choose to record a challenge entry.",
+        "NSPhotoLibraryUsageDescription": "SHOWOUT accesses your library when you choose an existing challenge entry."
+      }
+    },
+    "android": {
+      "package": "com.showout.pilot",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_VIDEO"
+      ]
+    },
+    "extra": {
+      "purpose": "Local pilot companion for the SHOWOUT PWA"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store"
+    ]
+  }
+}
