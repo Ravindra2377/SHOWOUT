@@ -3,6 +3,7 @@
     "name": "SHOWOUT",
     "slug": "showout-pilot",
     "version": "0.1.0",
+    "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "showout",

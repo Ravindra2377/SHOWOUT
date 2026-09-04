@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, Ban, Check, Flag, X } from "lucide-react";
 import { inbox } from "@/lib/demo-data";
 import { messagingEligibility } from "@/lib/domain/messaging";
 
-export default function RequestsPage() {
-  const req = inbox.find((x: any) => x.kind === "request")!;
+export default function RequestsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const req = inbox.find((x: any) => x.id === resolvedParams.id) || inbox.find((x: any) => x.kind === "request") || inbox[0];
 
-  const person = inbox.find((x: any) => x.id === req.id) || inbox[0];
+  const person = req;
   const context = {
     mutualConnection: person.mutualConnection ?? false,
     sharedChallenge: person.sharedChallenge ?? false,
@@ -26,7 +27,7 @@ export default function RequestsPage() {
 
   return (
     <div className="page-narrow">
-      <Link href="/inbox" className="eyebrow">
+      <Link href="/inbox?tab=requests" className="eyebrow">
         <ArrowLeft size={15} /> Inbox
       </Link>
       <header style={{ margin: "25px 0" }}>
@@ -83,7 +84,7 @@ export default function RequestsPage() {
             className="muted"
             style={{ fontSize: 12 }}
           >
-            Jules cannot send another message until you accept. Declining prevents this request from being recreated.</p>
+            {req.displayName} cannot send another message until you accept. Declining prevents this request from being recreated.</p>
           <div
             style={{
               display: "grid",

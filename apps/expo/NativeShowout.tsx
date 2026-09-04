@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-type Tab = "arcade" | "create" | "watch" | "profile";
+type Tab = "arcade" | "create" | "watch" | "inbox" | "profile";
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
 const art = {
@@ -48,6 +48,8 @@ export default function NativeShowout() {
     ]).start();
   }, [opacity, tab, translate]);
 
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
   return (
     <SafeAreaProvider>
       <LinearGradient colors={["#e9e8ff", "#f8eafa", "#eaf6ff"]} style={styles.app}>
@@ -59,11 +61,23 @@ export default function NativeShowout() {
         <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
           <Animated.View style={[styles.screen, { opacity, transform: [{ translateY: translate }] }]}>
             <BackendStatus state={backend} />
-            {tab === "arcade" && <Arcade onEnter={() => setTab("create")} />}
-            {tab === "create" && <Create />}
-            {tab === "watch" && <Watch />}
-            {tab === "profile" && <Profile />}
+            {tab === "arcade" && <Arcade onEnter={() => setTab("create")} onAction={() => setActiveMenu("Arcade Notifications: 0 unread alerts")} />}
+            {tab === "create" && <Create onBack={() => setTab("arcade")} onAction={() => setActiveMenu("Submission Settings: Max 60s video, 250MB limit")} />}
+            {tab === "watch" && <Watch onBack={() => setTab("arcade")} onAction={() => setActiveMenu("Voting Preferences: Anonymity active")} />}
+            {tab === "inbox" && <Inbox onBack={() => setTab("arcade")} onAction={() => setActiveMenu("Inbox Options: 2 messages, 1 request")} />}
+            {tab === "profile" && <Profile onBack={() => setTab("arcade")} onAction={() => setActiveMenu("Profile Actions: Share or edit profile")} />}
           </Animated.View>
+          {activeMenu && (
+            <Pressable onPress={() => setActiveMenu(null)} style={styles.modalOverlay}>
+              <Glass style={styles.modalCard}>
+                <Text style={styles.modalTitle}>OPTIONS</Text>
+                <Text style={styles.modalBody}>{activeMenu}</Text>
+                <Pressable onPress={() => setActiveMenu(null)} style={styles.modalCloseBtn}>
+                  <Text style={styles.modalCloseText}>Close</Text>
+                </Pressable>
+              </Glass>
+            </Pressable>
+          )}
           <BottomNav tab={tab} onChange={setTab} />
         </SafeAreaView>
       </LinearGradient>
@@ -75,21 +89,21 @@ function BackendStatus({ state }: { state: "connecting" | "connected" | "offline
   return <View style={[styles.backendStatus, state === "offline" && styles.backendOffline]}><View style={[styles.backendDot, state === "offline" && styles.backendDotOffline]} /><Text style={styles.backendText}>{state === "connected" ? "PILOT SYNCED" : state === "offline" ? "OFFLINE · ACTIONS PAUSED" : "CONNECTING"}</Text></View>;
 }
 
-function TopBar({ title, subtitle, back, action = "notifications-outline" }: { title: string; subtitle?: string; back?: boolean; action?: IconName }) {
+function TopBar({ title, subtitle, back, action = "notifications-outline", onBack, onAction }: { title: string; subtitle?: string; back?: boolean; action?: IconName; onBack?: () => void; onAction?: () => void }) {
   return <View style={styles.topBar}>
-    {back ? <IconButton icon="chevron-back" /> : <View style={styles.brandMark}><Text style={styles.brandText}>S</Text></View>}
+    {back ? <IconButton icon="chevron-back" onPress={onBack} /> : <View style={styles.brandMark}><Text style={styles.brandText}>S</Text></View>}
     <View style={styles.topCopy}><Text style={styles.topTitle}>{title}</Text>{subtitle && <Text style={styles.topSubtitle}>{subtitle}</Text>}</View>
-    <IconButton icon={action} />
+    <IconButton icon={action} onPress={onAction} />
   </View>;
 }
 
-function Arcade({ onEnter }: { onEnter: () => void }) {
+function Arcade({ onEnter, onAction }: { onEnter: () => void; onAction?: () => void }) {
   const [filter, setFilter] = useState("For You");
   const [liveChallenges, setLiveChallenges] = useState<ApiChallenge[]>([]);
   useEffect(() => { api.challenges().then(setLiveChallenges).catch(() => {}); }, []);
   const feature = liveChallenges.find((challenge) => challenge.number === 42);
   return <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-    <TopBar title="Arcade" subtitle="Find a challenge. Make your proof." />
+    <TopBar title="Arcade" subtitle="Find a challenge. Make your proof." onAction={onAction} />
     <View style={styles.wordmarkRow}><Text style={styles.wordmark}>SHOWOUT</Text><View style={styles.liveDot} /></View>
     <Text style={styles.heroHeading}>PROVE IT.</Text>
     <View style={styles.segment}>{["For You", "Open", "Upcoming", "Reveal"].map(item => <Pressable key={item} onPress={() => setFilter(item)} style={[styles.segmentItem, filter === item && styles.segmentActive]}><Text style={[styles.segmentText, filter === item && styles.segmentTextActive]}>{item}</Text></Pressable>)}</View>
@@ -115,7 +129,7 @@ function Arcade({ onEnter }: { onEnter: () => void }) {
   </ScrollView>;
 }
 
-function Create() {
+function Create({ onBack, onAction }: { onBack?: () => void; onAction?: () => void }) {
   const [terms, setTerms] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [caption, setCaption] = useState("");
@@ -153,9 +167,9 @@ function Create() {
     finally { setBusy(false); }
   }
 
-  if (submitted) return <ScrollView contentContainerStyle={styles.scroll}><TopBar title="Create & Submit" back action="ellipsis-horizontal" /><Glass style={styles.successCard}><View style={styles.successIcon}><Ionicons name="lock-closed" size={30} color="#fff" /></View><Text style={styles.successKicker}>ENTRY SUBMITTED</Text><Text style={styles.successTitle}>HIDDEN.{"\n"}LOCKED.{"\n"}READY.</Text><Text style={styles.bodyCenter}>Your work is safely persisted in Challenge #042. Creator identity stays hidden until each vote is locked.</Text><Badge text="TERMS V1.1 ACCEPTED" /><GradientButton label="Back to Arcade" icon="checkmark" onPress={() => setSubmitted(false)} /></Glass></ScrollView>;
+  if (submitted) return <ScrollView contentContainerStyle={styles.scroll}><TopBar title="Create & Submit" back onBack={onBack} action="ellipsis-horizontal" onAction={onAction} /><Glass style={styles.successCard}><View style={styles.successIcon}><Ionicons name="lock-closed" size={30} color="#fff" /></View><Text style={styles.successKicker}>ENTRY SUBMITTED</Text><Text style={styles.successTitle}>HIDDEN.{"\n"}LOCKED.{"\n"}READY.</Text><Text style={styles.bodyCenter}>Your work is safely persisted in Challenge #042. Creator identity stays hidden until each vote is locked.</Text><Badge text="TERMS V1.1 ACCEPTED" /><GradientButton label="Back to Arcade" icon="checkmark" onPress={() => setSubmitted(false)} /></Glass></ScrollView>;
   return <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-    <TopBar title="Create & Submit" back action="ellipsis-horizontal" />
+    <TopBar title="Create & Submit" back onBack={onBack} action="ellipsis-horizontal" onAction={onAction} />
     <Glass style={styles.challengeStrip}><Image source={art.hero} style={styles.stripImage} /><View style={{ flex: 1 }}><Text style={styles.stripLabel}>CHALLENGE #042</Text><Text style={styles.stripTitle}>One Room. One Minute.</Text></View><Ionicons name="chevron-forward" size={18} color="#645f7d" /></Glass>
     <Glass style={styles.deadlineCard}><Text style={styles.cardLabel}>SUBMISSION CLOSES IN</Text><Countdown dark /><View style={styles.progressTrack}><LinearGradient colors={["#6e57ff", "#2fc7f7"]} style={[styles.progressFill, { width: "58%" }]} /></View></Glass>
     <SectionTitle title="Challenge constraints" />
@@ -172,7 +186,7 @@ function Create() {
   </ScrollView>;
 }
 
-function Watch() {
+function Watch({ onBack, onAction }: { onBack?: () => void; onAction?: () => void }) {
   const [scores, setScores] = useState({ Originality: 0, Execution: 0, Entertainment: 0 });
   const [assignments, setAssignments] = useState<RevealAssignment[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -199,22 +213,95 @@ function Watch() {
   }
   const complete = !loading && assignments.length > 0 && activeIndex >= assignments.length;
   return <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-    <TopBar title="Watch & Vote" back action="options-outline" />
+    <TopBar title="Watch & Vote" back onBack={onBack} action="options-outline" onAction={onAction} />
     <Glass style={styles.privacyBanner}><View style={styles.shield}><Ionicons name="shield-checkmark" size={17} color="#6653e8" /></View><View style={{ flex: 1 }}><Text style={styles.privacyTitle}>Creator hidden for fair voting</Text><Text style={styles.privacyCopy}>The API omits identity until your vote is locked.</Text></View></Glass>
     <View style={styles.voteProgress}><Text style={styles.voteCount}>{loading ? "Loading assignment…" : complete ? "Voting set complete" : current ? `Entry ${current.position} of ${current.total}` : "No eligible entries"}</Text><Text style={styles.percent}>{current?.total ? `${Math.round((current.position / current.total) * 100)}%` : "—"}</Text></View><View style={styles.progressTrack}><LinearGradient colors={["#7158ff", "#29c7ef"]} style={[styles.progressFill, { width: current?.total ? `${(current.position / current.total) * 100}%` : "0%" }]} /></View>
-    <Glass style={styles.voteCard}><View style={styles.voteMedia}><Image source={complete ? art.mountains : art.neon} style={StyleSheet.absoluteFill} contentFit="cover" /><LinearGradient colors={["transparent", "rgba(3,4,18,.45)"]} style={StyleSheet.absoluteFill} /><Badge text={current ? `#${String(current.position).padStart(2,"0")} · ${Math.round(current.duration ?? 0)}s` : complete ? "SET COMPLETE" : "ANONYMOUS"} /><View style={styles.playButton}><Ionicons name={complete ? "checkmark" : "play"} size={27} color="#fff" /></View><IconButton icon="ellipsis-horizontal" dark /></View>
+    <Glass style={styles.voteCard}><View style={styles.voteMedia}><Image source={complete ? art.mountains : art.neon} style={StyleSheet.absoluteFill} contentFit="cover" /><LinearGradient colors={["transparent", "rgba(3,4,18,.45)"]} style={StyleSheet.absoluteFill} /><Badge text={current ? `#${String(current.position).padStart(2,"0")} · ${Math.round(current.duration ?? 0)}s` : complete ? "SET COMPLETE" : "ANONYMOUS"} /><View style={styles.playButton}><Ionicons name={complete ? "checkmark" : "play"} size={27} color="#fff" /></View><IconButton icon="ellipsis-horizontal" dark onPress={onAction} /></View>
       {!creator ? <View style={styles.scoreArea}><Text style={styles.scoreTitle}>{complete ? "You showed up for the set." : "Score this entry"}</Text>{!complete && current && (Object.keys(scores) as Array<keyof typeof scores>).map(dimension => <View style={styles.scoreRow} key={dimension}><Text style={styles.scoreLabel}>{dimension}</Text><View style={styles.stars}>{[1,2,3,4,5].map(value => <Pressable key={value} onPress={() => setScores(state => ({ ...state, [dimension]: value }))} hitSlop={7}><Ionicons name={scores[dimension] >= value ? "star" : "star-outline"} size={29} color={scores[dimension] >= value ? "#516ff2" : "#b4b3c6"} /></Pressable>)}</View></View>)}{current && !complete && <GradientButton disabled={!ready} label="Lock My Vote" icon="lock-closed" onPress={lock} />}{error && <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text>}<View style={styles.secondaryActions}><Pressable style={styles.textAction} onPress={next}><Ionicons name="play-skip-forward-outline" size={16} color="#5e5974" /><Text style={styles.textActionLabel}>Skip</Text></Pressable><Pressable style={styles.textAction}><Ionicons name="flag-outline" size={16} color="#5e5974" /><Text style={styles.textActionLabel}>Report</Text></Pressable></View></View> : <LinearGradient colors={["#d8ffbd", "#c9f7ff"]} style={styles.revealPanel}><Text style={styles.revealKicker}>VOTE LOCKED · CREATOR REVEALED</Text><View style={styles.creatorRow}><Image source={art.maya} style={styles.creatorAvatar} /><View><Text style={styles.creatorName}>{creator.displayName}</Text><Text style={styles.creatorHandle}>@{creator.handle}</Text></View></View><Text style={styles.revealCopy}>Your scores are final. The creator cannot see how you rated this Entry.</Text><GradientButton label="Next Entry" icon="arrow-forward" onPress={next} /></LinearGradient>}
     </Glass>
     <SectionTitle title="Up next" /><Glass style={styles.nextCard}><Image source={art.mountains} style={styles.nextImage} /><View style={{ flex: 1 }}><Text style={styles.cardLabel}>NEXT ASSIGNMENT</Text><Text style={styles.nextTitle}>Anonymous until you vote</Text></View><Ionicons name="play-circle-outline" size={34} color="#6653e8" /></Glass><View style={styles.endSpace} />
   </ScrollView>;
 }
 
-function Profile() {
+function Inbox({ onBack, onAction }: { onBack?: () => void; onAction?: () => void }) {
+  const [filter, setFilter] = useState<"chats" | "requests" | "teams">("chats");
+  return <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <TopBar title="Inbox" subtitle="Controlled connections & messages" back onBack={onBack} action="options-outline" onAction={onAction} />
+    <View style={styles.segment}>
+      {(["chats", "requests", "teams"] as const).map(item => (
+        <Pressable key={item} onPress={() => setFilter(item)} style={[styles.segmentItem, filter === item && styles.segmentActive]}>
+          <Text style={[styles.segmentText, filter === item && styles.segmentTextActive]}>
+            {item === "chats" ? "Messages (2)" : item === "requests" ? "Requests (1)" : "Teams"}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+    {filter === "chats" && (
+      <>
+        <Glass style={styles.challengeRow}>
+          <Image source={art.maya} style={styles.rowImage} />
+          <View style={styles.rowCopy}>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: "#6f54ff" }]} />
+              <Text style={styles.statusText}>ACTIVE CONVERSATION</Text>
+            </View>
+            <Text style={styles.rowTitle}>Maya Sen (@maya.makes)</Text>
+            <Text style={styles.rowBrief}>Hey! Loved your thriller entry for #042.</Text>
+          </View>
+          <Text style={styles.rowMeta}>10m ago</Text>
+        </Glass>
+        <Glass style={styles.challengeRow}>
+          <Image source={art.sound} style={styles.rowImage} />
+          <View style={styles.rowCopy}>
+            <View style={styles.statusRow}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>CHALLENGE TEAM</Text>
+            </View>
+            <Text style={styles.rowTitle}>Sound Design Crew</Text>
+            <Text style={styles.rowBrief}>Latest audio sync export is ready in project folder.</Text>
+          </View>
+          <Text style={styles.rowMeta}>2h ago</Text>
+        </Glass>
+      </>
+    )}
+    {filter === "requests" && (
+      <Glass style={styles.challengeRow}>
+        <Image source={art.astronaut} style={styles.rowImage} />
+        <View style={styles.rowCopy}>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: "#e9723c" }]} />
+            <Text style={styles.statusText}>NEW REQUEST</Text>
+          </View>
+          <Text style={styles.rowTitle}>Alex Rivera (@arivera)</Text>
+          <Text style={styles.rowBrief}>Wants to collaborate on Challenge #043</Text>
+        </View>
+        <Text style={styles.rowMeta}>1d ago</Text>
+      </Glass>
+    )}
+    {filter === "teams" && (
+      <Glass style={styles.challengeRow}>
+        <Image source={art.neon} style={styles.rowImage} />
+        <View style={styles.rowCopy}>
+          <View style={styles.statusRow}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>TEAM</Text>
+          </View>
+          <Text style={styles.rowTitle}>The Perfect Loop Directors</Text>
+          <Text style={styles.rowBrief}>3 members · Active discussion</Text>
+        </View>
+        <Text style={styles.rowMeta}>3d ago</Text>
+      </Glass>
+    )}
+    <View style={styles.endSpace} />
+  </ScrollView>;
+}
+
+function Profile({ onBack, onAction }: { onBack?: () => void; onAction?: () => void }) {
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { api.ensureSession().then(() => api.profile()).then(setProfile).catch((cause) => setError(cause instanceof Error ? cause.message : "Proof is unavailable.")); }, []);
   return <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-    <TopBar title="Proof Profile" back action="ellipsis-horizontal" />
+    <TopBar title="Proof Profile" back onBack={onBack} action="ellipsis-horizontal" onAction={onAction} />
     <View style={styles.profileHero}><LinearGradient colors={["rgba(252,174,222,.65)", "rgba(148,218,255,.48)", "rgba(255,255,255,.1)"]} style={StyleSheet.absoluteFill} /><Image source={art.maya} style={styles.profileAvatar} /><Text style={styles.profileName}>{profile?.displayName ?? "Maya Sen"}</Text><Text style={styles.handle}>@{profile?.handle ?? "maya.makes"}</Text><Text style={styles.profileBio}>{profile?.bio ?? "Director and editor making tiny films with oversized tension."}</Text><View style={styles.skillChips}>{["Direction", "Editing", "Storytelling", "Cinematography"].map(skill => <Badge text={skill} key={skill} soft />)}</View></View>
     <Glass style={styles.statsCard}><Stat value={String(profile?.challenges ?? 18)} label="Challenges" /><Divider /><Stat value={String(profile?.communityPicks ?? 6)} label="Community Picks" /><Divider /><Stat value={String(profile?.judgePicks ?? 3)} label="Judge Picks" /></Glass>
     <Glass style={styles.proofScore}><View><Text style={styles.cardLabel}>COMPLETION RATE</Text><Text style={styles.proofNumber}>{profile ? `${profile.completionRate}%` : "86%"}</Text><Text style={styles.proofRank}>Derived from settled challenge data</Text></View><View style={styles.chart}><View style={[styles.chartBar,{height:20}]} /><View style={[styles.chartBar,{height:30}]} /><View style={[styles.chartBar,{height:25}]} /><View style={[styles.chartBar,{height:42}]} /><View style={[styles.chartBar,{height:50}]} /></View></Glass>
@@ -227,12 +314,12 @@ function Profile() {
 
 function BottomNav
 ({ tab, onChange }: { tab: Tab; onChange: (tab: Tab) => void }) {
-  const items: Array<[Tab, IconName, string]> = [["arcade","compass","Arcade"],["create","add-circle","Create"],["watch","play-circle","Watch"],["profile","person-circle","Profile"]];
+  const items: Array<[Tab, IconName, string]> = [["arcade","compass","Arcade"],["create","add-circle","Create"],["watch","play-circle","Watch"],["inbox","mail","Inbox"],["profile","person-circle","Profile"]];
   return <BlurView intensity={85} tint="light" style={styles.bottomNav}>{items.map(([value,icon,label]) => <Pressable key={value} onPress={() => onChange(value)} style={styles.navItem}><View style={[styles.navIcon, tab === value && styles.navIconActive]}><Ionicons name={tab === value ? icon : (`${icon}-outline` as IconName)} size={22} color={tab === value ? "#fff" : "#77718d"} /></View><Text style={[styles.navLabel, tab === value && styles.navLabelActive]}>{label}</Text></Pressable>)}</BlurView>;
 }
 
 function Glass({ children, style }: { children: ReactNode; style?: object }) { return <BlurView intensity={52} tint="light" style={[styles.glass, style]}>{children}</BlurView>; }
-function IconButton({ icon, dark }: { icon: IconName; dark?: boolean }) { return <Pressable style={[styles.iconButton, dark && styles.iconButtonDark]}><Ionicons name={icon} size={19} color={dark ? "#fff" : "#4e4961"} /></Pressable>; }
+function IconButton({ icon, dark, onPress }: { icon: IconName; dark?: boolean; onPress?: () => void }) { return <Pressable onPress={onPress} style={({ pressed }) => [styles.iconButton, dark && styles.iconButtonDark, pressed && { opacity: 0.7 }]}>{<Ionicons name={icon} size={19} color={dark ? "#fff" : "#4e4961"} />}</Pressable>; }
 function Badge({ text, soft }: { text: string; soft?: boolean }) { return <View style={[styles.badge, soft && styles.badgeSoft]}><Text style={[styles.badgeText, soft && styles.badgeTextSoft]}>{text}</Text></View>; }
 function Meta({ icon, label }: { icon: IconName; label: string }) { return <View style={styles.meta}><Ionicons name={icon} size={15} color="#fff" /><Text style={styles.metaText}>{label}</Text></View>; }
 function Countdown({ dark }: { dark?: boolean }) { return <View style={[styles.countdown, dark && styles.countdownLight]}>{[["02","DAYS"],["09","HRS"],["42","MIN"],["19","SEC"]].map(([value,label]) => <View style={styles.timeBlock} key={label}><Text style={[styles.timeValue, dark && styles.timeValueDark]}>{value}</Text><Text style={[styles.timeLabel, dark && styles.timeLabelDark]}>{label}</Text></View>)}</View>; }
@@ -254,4 +341,5 @@ const styles = StyleSheet.create({
   privacyBanner:{padding:11,flexDirection:"row",alignItems:"center",gap:10,borderRadius:17},shield:{width:35,height:35,borderRadius:12,backgroundColor:"rgba(107,83,233,.12)",alignItems:"center",justifyContent:"center"},privacyTitle:{fontSize:11,fontWeight:"900",color:"#302c43"},privacyCopy:{fontSize:9,color:"#827b92",marginTop:2},voteProgress:{flexDirection:"row",justifyContent:"space-between",marginTop:16},voteCount:{fontSize:12,fontWeight:"900",color:"#312d45"},percent:{fontSize:10,fontWeight:"800",color:"#70699a"},voteCard:{padding:0,marginTop:13},voteMedia:{height:260,overflow:"hidden",padding:11},scoreArea:{padding:15},scoreTitle:{fontSize:15,fontWeight:"900",color:"#2b273e",marginBottom:9},scoreRow:{marginVertical:6},scoreLabel:{fontSize:9,fontWeight:"900",color:"#6d667d",marginBottom:5},stars:{flexDirection:"row",justifyContent:"space-between"},secondaryActions:{flexDirection:"row",justifyContent:"space-between",paddingTop:10},textAction:{flexDirection:"row",alignItems:"center",gap:5,padding:8},textActionLabel:{fontSize:10,fontWeight:"800",color:"#5e5974"},revealPanel:{padding:16},revealKicker:{fontSize:8,fontWeight:"900",letterSpacing:.7,color:"#385950"},creatorRow:{flexDirection:"row",alignItems:"center",gap:11,marginTop:12},creatorAvatar:{width:54,height:54,borderRadius:20},creatorName:{fontSize:16,fontWeight:"900",color:"#252c32"},creatorHandle:{fontSize:9,color:"#687476",marginTop:3},revealCopy:{fontSize:10,lineHeight:15,color:"#5c6968",marginVertical:11},nextCard:{padding:9,flexDirection:"row",alignItems:"center",gap:11,borderRadius:17},nextImage:{width:68,height:56,borderRadius:12},nextTitle:{fontSize:11,fontWeight:"800",color:"#302b44",marginTop:4},
   profileHero:{alignItems:"center",marginHorizontal:-16,paddingHorizontal:20,paddingTop:20,paddingBottom:22,overflow:"hidden"},profileAvatar:{width:104,height:104,borderRadius:38,borderWidth:3,borderColor:"rgba(255,255,255,.88)"},profileName:{fontSize:25,fontWeight:"900",color:"#211d34",marginTop:11},handle:{fontSize:11,fontWeight:"700",color:"#6d6591",marginTop:2},profileBio:{fontSize:11,lineHeight:16,textAlign:"center",color:"#656074",maxWidth:290,marginTop:10},skillChips:{flexDirection:"row",justifyContent:"center",flexWrap:"wrap",gap:6,marginTop:12},statsCard:{flexDirection:"row",padding:15,alignItems:"center",borderRadius:18},stat:{flex:1,alignItems:"center"},statValue:{fontSize:23,fontWeight:"900",color:"#2a263e"},statLabel:{fontSize:8,fontWeight:"800",color:"#7e778e",textAlign:"center",marginTop:3},divider:{width:1,height:34,backgroundColor:"rgba(96,87,121,.15)"},proofScore:{padding:15,marginTop:10,flexDirection:"row",justifyContent:"space-between",alignItems:"flex-end",borderRadius:18},proofNumber:{fontSize:34,fontWeight:"900",color:"#2a263e",marginTop:4},proofRank:{fontSize:9,color:"#6f6880"},chart:{height:55,flexDirection:"row",alignItems:"flex-end",gap:5},chartBar:{width:7,borderRadius:4,backgroundColor:"#7659ef"},skillsPanel:{gap:12},skillLine:{flexDirection:"row",alignItems:"center",gap:8},skillName:{width:78,fontSize:10,fontWeight:"800",color:"#4f495f"},skillTrack:{height:7,flex:1,backgroundColor:"rgba(93,84,122,.12)",borderRadius:4,overflow:"hidden"},skillFill:{height:7,borderRadius:4},skillCount:{width:20,fontSize:9,fontWeight:"900",color:"#6c64a0"},proofRail:{gap:10,paddingRight:16},proofCard:{width:154,padding:0,borderRadius:18},proofImage:{width:"100%",height:150},proofCardCopy:{padding:10},proofLabel:{fontSize:7,fontWeight:"900",letterSpacing:.6,color:"#6553df"},proofTitle:{fontSize:11,fontWeight:"900",color:"#2a263c",marginTop:4,textTransform:"uppercase"},
   bottomNav:{height:76,flexDirection:"row",borderTopWidth:1,borderColor:"rgba(255,255,255,.95)",paddingTop:7,paddingBottom:8,overflow:"hidden"},navItem:{flex:1,alignItems:"center",justifyContent:"center"},navIcon:{width:38,height:32,borderRadius:13,alignItems:"center",justifyContent:"center"},navIconActive:{backgroundColor:"#6554e9",shadowColor:"#5b4dc9",shadowOpacity:.3,shadowRadius:8},navLabel:{fontSize:8,fontWeight:"700",color:"#857e92",marginTop:3},navLabelActive:{color:"#4f45a3"},endSpace:{height:22},
+  modalOverlay:{...StyleSheet.absoluteFillObject,backgroundColor:"rgba(18,15,35,.45)",alignItems:"center",justifyContent:"center",padding:24,zIndex:100},modalCard:{width:"100%",padding:20,alignItems:"center"},modalTitle:{fontSize:11,fontWeight:"900",letterSpacing:1,color:"#6554e9"},modalBody:{fontSize:13,fontWeight:"700",color:"#302b44",textAlign:"center",marginVertical:14},modalCloseBtn:{paddingHorizontal:20,paddingVertical:10,borderRadius:12,backgroundColor:"#6554e9"},modalCloseText:{color:"#fff",fontSize:12,fontWeight:"800"},
 });

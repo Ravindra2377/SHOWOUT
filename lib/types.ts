@@ -28,4 +28,10 @@ export interface RevealEntry {
 export interface InboxItem {
   id: string; handle: string; displayName: string; avatar: string; preview: string; time: string;
   unread: number; context: string; state: "ACTIVE" | "REQUESTED"; kind: "message" | "request" | "team";
+  mutualConnection?: boolean;
+  sharedChallenge?: boolean;
+  sharedTeam?: boolean;
+  acceptedRequest?: boolean;
+  pilotEnabled?: boolean;
+  ageBand?: AgeBand;
 }
